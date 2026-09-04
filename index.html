@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Divya Krishna Darshan • Cosmic Reveal</title>
+    <style>
+        :root {
+            --gold: #ffd700;
+            --cyan: #00f0ff;
+            --bg: #010208;
+            --glass: rgba(10, 15, 30, 0.85);
+            --border: rgba(255, 215, 0, 0.35);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #stage-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1200px;
+            background: radial-gradient(circle at center, #0b132b 0%, #02040a 100%);
+        }
+
+        canvas {
+            display: block;
+            max-width: 95vw;
+            max-height: 90vh;
+            aspect-ratio: 16 / 9;
+            border-radius: 16px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.95), 0 0 50px rgba(0, 240, 255, 0.25);
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Floating HUD */
+        .glass-panel {
+            position: absolute;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            padding: 8px 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.7);
+            max-width: 96vw;
+        }
+
+        #top-hud {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #bottom-hud {
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffd700;
+            padding: 8px 26px;
+            letter-spacing: 0.8px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.08);
+            color: #eee;
+            border: 1px solid rgba(255, 215, 0, 0.35);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #ffd700, #ff9900);
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+            border-color: #ffd700;
+            transform: translateY(-2px);
+        }
+
+        .btn.recording {
+            background: #ff0055;
+            color: #fff;
+            border-color: #ff0055;
+            animation: pulse 1s infinite;
+        }
+
+        .volume-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #ffd700;
+            font-size: 12px;
+        }
+
+        input[type="range"] {
+            width: 70px;
+            accent-color: #ffd700;
+            cursor: pointer;
+        }
+
+        select.btn {
+            appearance: none;
+            padding-right: 28px;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22gold%22%3E%3Cpath%20d%3D%22M7%2010l5%205%205-5z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        select.btn option {
+            background: #0b132b;
+            color: #ffd700;
+        }
+
+        input[type="file"] { display: none; }
+
+        #drop-zone {
+            position: absolute;
+            inset: 0;
+            border: 3px dashed var(--gold);
+            background: rgba(255, 215, 0, 0.08);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--gold);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- =========================================================
+     YOUR BACKGROUND MUSIC FILE:
+     Change "your-song.mp3" below to your audio file's name or path
+     ========================================================= -->
+<audio id="bg-audio" loop preload="auto">
+    <source src="your-song.mp3" type="audio/mpeg">
+</audio>
+
+<div id="stage-container">
+    <div id="drop-zone">✨ Drop your image here ✨</div>
+
+    <!-- Top Navigation HUD -->
+    <div id="top-hud" class="glass-panel">
+        <label class="btn" for="file-input">📷 <span>Upload Photo</span></label>
+        <input type="file" id="file-input" accept="image/*">
+
+        <!-- Optional: Pick another audio file from disk directly -->
+        <label class="btn" for="audio-file-input">🎵 <span id="bgm-name-tag">Change Music</span></label>
+        <input type="file" id="audio-file-input" accept="audio/*">
+        
+        <button id="btn-replay" class="btn">🔁 Replay</button>
+        
+        <select id="theme-select" class="btn">
+            <option value="gold" selected>Sacred Krishna Gold</option>
+            <option value="peacock">Vrindavan Peacock Teal</option>
+            <option value="cyber">Cosmic Cyan & Ruby</option>
+            <option value="solar">Solar Radharani Glow</option>
+            <option value="original">Original Masterpiece</option>
+        </select>
+
+        <button id="btn-music-toggle" class="btn">🔊 Music: ON</button>
+        
+        <div class="volume-container">
+            <span>🔈</span>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.8">
+        </div>
+
+        <button id="btn-record" class="btn">🔴 Record Reel</button>
+        <button id="btn-fullscreen" class="btn">⛶</button>
+    </div>
+
+    <canvas id="viewport" width="1920" height="1080"></canvas>
+
+    <div id="bottom-hud" class="glass-panel">
+        <span id="status-text">श्री कृष्ण 🪈 Jai Shri Krishna</span>
+    </div>
+</div>
+
+<script>
+const CANVAS_W = 1920;
+const CANVAS_H = 1080;
+const DURATION_SWARM = 4.6;   // Particles fly in
+const DURATION_NEON  = 3.2;   // Glowing golden contours awaken
+const DURATION_SWEEP = 1.8;   // Divine light sweep
+const DURATION_FADE  = 2.2;   // Transmutation into artwork
+const DURATION_HOLD  = 5.0;   // Ambient darshan hold
+
+// Buffers
+const viewCanvas = document.getElementById('viewport');
+const viewCtx = viewCanvas.getContext('2d');
+
+const baseCanvas = document.createElement('canvas');
+baseCanvas.width = CANVAS_W; baseCanvas.height = CANVAS_H;
+const baseCtx = baseCanvas.getContext('2d');
+
+const neonCanvas = document.createElement('canvas');
+neonCanvas.width = CANVAS_W; neonCanvas.height = CANVAS_H;
+const neonCtx = neonCanvas.getContext('2d');
+
+// State
+let particles = [];
+let ambientMotes = [];
+let animStartTime = null;
+let isRunning = false;
+let currentTheme = 'gold';
+
+// ==========================================
+// 1. BACKGROUND MUSIC CONTROLLER
+// ==========================================
+const bgAudio = document.getElementById('bg-audio');
+let musicEnabled = true;
+bgAudio.volume = 0.8;
+
+// Web Audio routing so that video recorder captures the audio track
+let audioCtx = null;
+let audioSourceNode = null;
+let mediaStreamDest = null;
+
+function setupAudioStreamCapture() {
+    if (audioCtx) return;
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        audioSourceNode = audioCtx.createMediaElementSource(bgAudio);
+        mediaStreamDest = audioCtx.createMediaStreamDestination();
+        
+        // Connect to speakers and capture stream
+        audioSourceNode.connect(audioCtx.destination);
+        audioSourceNode.connect(mediaStreamDest);
+    } catch(e) {
+        console.warn("Capture node notice:", e);
+    }
+}
+
+function startMusicPlayback() {
+    if (!musicEnabled) return;
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    bgAudio.currentTime = 0;
+    bgAudio.play().catch(e => {
+        console.log("Autoplay waiting for user gesture:", e);
+    });
+}
+
+function stopMusicPlayback() {
+    bgAudio.pause();
+}
+
+// Start audio on first user touch/click anywhere (browser policy)
+window.addEventListener('click', () => {
+    setupAudioStreamCapture();
+    if (musicEnabled && bgAudio.paused) {
+        startMusicPlayback();
+    }
+}, { once: true });
+
+// ==========================================
+// 2. EMBEDDED MASTERPIECE ARTWORK
+// ==========================================
+function getKrishnaMasterpieceSVG() {
+    return `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+        <defs>
+            <radialGradient id="skyGrad" cx="50%" cy="45%" r="60%">
+                <stop offset="0%" stop-color="#0a1838"/>
+                <stop offset="40%" stop-color="#04091a"/>
+                <stop offset="100%" stop-color="#010206"/>
+            </radialGradient>
+
+            <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fff9d6" stop-opacity="1"/>
+                <stop offset="40%" stop-color="#ffd56b" stop-opacity="0.85"/>
+                <stop offset="75%" stop-color="#ff9900" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#00f0ff" stop-opacity="0"/>
+            </radialGradient>
+
+            <linearGradient id="skinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#80d0ff"/>
+                <stop offset="30%" stop-color="#3b82f6"/>
+                <stop offset="70%" stop-color="#1d4ed8"/>
+                <stop offset="100%" stop-color="#0f172a"/>
+            </linearGradient>
+
+            <linearGradient id="fluteGrad" x1="0%" y1="0%" x2="100%" y2="50%">
+                <stop offset="0%" stop-color="#ffe259"/>
+                <stop offset="35%" stop-color="#ffa751"/>
+                <stop offset="70%" stop-color="#ffcc33"/>
+                <stop offset="100%" stop-color="#ff9900"/>
+            </linearGradient>
+
+            <linearGradient id="goldCrown" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#fff4b8"/>
+                <stop offset="40%" stop-color="#ffd700"/>
+                <stop offset="80%" stop-color="#d48806"/>
+                <stop offset="100%" stop-color="#874d00"/>
+            </linearGradient>
+
+            <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="8" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+        </defs>
+
+        <rect width="1920" height="1080" fill="url(#skyGrad)"/>
+        <circle cx="920" cy="480" r="420" fill="url(#moonGlow)"/>
+
+        <g stroke="rgba(255, 215, 0, 0.4)" stroke-width="2" fill="none">
+            <circle cx="920" cy="480" r="380" stroke-dasharray="8 12"/>
+            <circle cx="920" cy="480" r="350"/>
+            <circle cx="920" cy="480" r="320" stroke-dasharray="4 8"/>
+        </g>
+
+        <path d="M 1480,450 C 1600,320 1660,540 1820,380 S 1900,480 1960,390" 
+              fill="none" stroke="#00f0ff" stroke-width="4" filter="url(#softGlow)" opacity="0.8"/>
+        <path d="M 1460,470 C 1580,360 1680,580 1840,420 S 1910,500 1980,430" 
+              fill="none" stroke="#ffd700" stroke-width="3" opacity="0.6"/>
+
+        <g fill="#080c1a" stroke="#1e3a8a" stroke-width="4">
+            <path d="M 720,320 C 650,380 610,500 630,620 C 640,680 700,750 780,780 C 720,700 700,560 740,420 Z"/>
+            <circle cx="680" cy="480" r="40"/><circle cx="660" cy="560" r="45"/><circle cx="680" cy="640" r="45"/><circle cx="720" cy="720" r="40"/>
+        </g>
+
+        <g id="krishna-figure">
+            <path d="M 640,1080 C 660,880 720,780 820,720 C 880,680 940,690 1020,740 C 1080,780 1140,880 1160,1080 Z" 
+                  fill="url(#skinGrad)" stroke="#38bdf8" stroke-width="2"/>
+            <path d="M 770,330 C 790,380 785,410 755,445 C 780,450 785,455 770,475 C 750,485 750,500 770,510 C 790,520 780,545 760,565 C 790,585 810,630 820,720 C 750,700 710,580 720,440 C 725,370 745,340 770,330 Z" 
+                  fill="url(#skinGrad)" stroke="#67e8f9" stroke-width="3"/>
+            
+            <g transform="translate(775, 415)">
+                <path d="M 0,0 C 25,-20 55,-18 75,0 C 55,20 25,18 0,0 Z" fill="#080e21" stroke="#ffd700" stroke-width="2.5"/>
+                <ellipse cx="42" cy="0" rx="14" ry="14" fill="#00f0ff"/>
+                <circle cx="42" cy="0" r="8" fill="#030712"/><circle cx="46" cy="-3" r="3.5" fill="#ffffff"/>
+                <path d="M -5,-22 C 30,-42 65,-36 88,-18" fill="none" stroke="#ffd700" stroke-width="2" stroke-linecap="round"/>
+            </g>
+
+            <g transform="translate(760, 340)">
+                <path d="M 0,0 Q 8,45 16,0 L 14,-25 Q 8,-10 2,-25 Z" fill="#ffffff" stroke="#ffd700" stroke-width="1.5"/>
+                <path d="M 8,-20 L 8,30" stroke="#e11d48" stroke-width="3.5" stroke-linecap="round"/>
+                <circle cx="8" cy="38" r="3" fill="#e11d48"/>
+            </g>
+            <path d="M 752,488 C 765,492 775,490 782,482" fill="none" stroke="#f43f5e" stroke-width="4" stroke-linecap="round"/>
+            <g transform="translate(725, 480)">
+                <path d="M 0,0 C -20,20 -15,50 5,60 C 25,45 20,15 0,0 Z" fill="url(#goldCrown)" stroke="#ffd700" stroke-width="2"/>
+                <circle cx="2" cy="32" r="7" fill="#e11d48"/><circle cx="2" cy="62" r="5" fill="#ffffff"/>
+            </g>
+        </g>
+
+        <g id="crown" transform="translate(710, 160)">
+            <path d="M 20,170 L 60,30 L 120,0 L 180,30 L 220,170 Z" fill="url(#goldCrown)" stroke="#ffd700" stroke-width="4"/>
+            <circle cx="120" cy="60" r="16" fill="#e11d48" stroke="#fff" stroke-width="2"/>
+            <circle cx="120" cy="110" r="12" fill="#00f0ff" stroke="#fff" stroke-width="2"/>
+        </g>
+
+        <g id="mor-pankh" transform="translate(830, 40) rotate(-15)">
+            <ellipse cx="60" cy="30" rx="75" ry="110" fill="#047857" stroke="#10b981" stroke-width="3"/>
+            <ellipse cx="60" cy="45" rx="55" ry="80" fill="#00f0ff" stroke="#ffd700" stroke-width="3"/>
+            <ellipse cx="60" cy="55" rx="38" ry="55" fill="#1e3a8a"/>
+            <ellipse cx="60" cy="68" rx="20" ry="28" fill="#ffd700"/>
+            <circle cx="60" cy="74" r="10" fill="#030712"/>
+        </g>
+
+        <g id="flute">
+            <rect x="680" y="470" width="820" height="32" rx="16" 
+                  fill="url(#fluteGrad)" stroke="#fff" stroke-width="2" 
+                  transform="rotate(-7, 680, 470)" filter="url(#softGlow)"/>
+            <g transform="rotate(-7, 680, 470)" fill="#e11d48">
+                <rect x="740" y="470" width="12" height="32"/>
+                <rect x="860" y="470" width="12" height="32"/>
+                <rect x="1100" y="470" width="12" height="32"/>
+                <circle cx="960" cy="486" r="6" fill="#030712"/>
+                <circle cx="1020" cy="486" r="6" fill="#030712"/>
+                <circle cx="1080" cy="486" r="6" fill="#030712"/>
+            </g>
+            <g transform="translate(1480, 360)">
+                <path d="M 0,0 C 15,60 -10,120 10,180" fill="none" stroke="#e11d48" stroke-width="4"/>
+                <circle cx="10" cy="185" r="12" fill="#ffd700" stroke="#fff" stroke-width="2"/>
+                <path d="M 10,195 L 0,240 L 20,240 Z" fill="#e11d48"/>
+            </g>
+        </g>
+
+        <g id="hands" transform="rotate(-7, 680, 470)">
+            <g fill="url(#skinGrad)" stroke="#38bdf8" stroke-width="2">
+                <rect x="945" y="440" width="22" height="50" rx="11"/>
+                <rect x="1005" y="435" width="22" height="55" rx="11"/>
+                <rect x="1065" y="442" width="22" height="48" rx="11"/>
+                <circle cx="956" cy="448" r="8" fill="#e11d48"/>
+                <circle cx="1016" cy="443" r="8" fill="#e11d48"/>
+                <circle cx="1076" cy="450" r="8" fill="#e11d48"/>
+            </g>
+        </g>
+    </svg>`;
+}
+
+// ==========================================
+// 3. THEME PROCESSOR
+// ==========================================
+function applyThemeColor(r, g, b, theme) {
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    if (theme === 'gold') {
+        return [Math.min(255, lum * 1.3 + 45), Math.min(255, lum * 0.95 + 20), Math.min(255, lum * 0.2)];
+    } else if (theme === 'peacock') {
+        return [Math.min(255, lum * 0.1), Math.min(255, lum * 1.1 + 40), Math.min(255, lum * 1.3 + 70)];
+    } else if (theme === 'cyber') {
+        return lum > 115 ? [0, 240, 255] : [255, 0, 110];
+    } else if (theme === 'solar') {
+        return [Math.min(255, lum * 1.4 + 50), Math.min(255, lum * 0.4), Math.min(255, lum * 0.1)];
+    }
+    return [r, g, b];
+}
+
+// ==========================================
+// 4. SOBEL EDGE DETECTION & PARTICLES
+// ==========================================
+function generateNeonAndParticles() {
+    const srcData = baseCtx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+    const pix = srcData.data;
+    const gray = new Uint8ClampedArray(CANVAS_W * CANVAS_H);
+
+    for (let i = 0; i < pix.length; i += 4) {
+        gray[i >> 2] = Math.round(0.299 * pix[i] + 0.587 * pix[i + 1] + 0.114 * pix[i + 2]);
+    }
+
+    const edgeData = neonCtx.createImageData(CANVAS_W, CANVAS_H);
+    const edgePix = edgeData.data;
+    particles = [];
+
+    const STEP = 2;
+    for (let y = 2; y < CANVAS_H - 2; y += 2) {
+        for (let x = 2; x < CANVAS_W - 2; x += 2) {
+            const idx = y * CANVAS_W + x;
+
+            const gx = -gray[idx - CANVAS_W - 1] + gray[idx - CANVAS_W + 1]
+                       -2 * gray[idx - 1] + 2 * gray[idx + 1]
+                       -gray[idx + CANVAS_W - 1] + gray[idx + CANVAS_W + 1];
+
+            const gy = -gray[idx - CANVAS_W - 1] - 2 * gray[idx - CANVAS_W] - gray[idx - CANVAS_W + 1]
+                       +gray[idx + CANVAS_W - 1] + 2 * gray[idx + CANVAS_W] + gray[idx + CANVAS_W + 1];
+
+            const mag = Math.hypot(gx, gy);
+
+            if (mag > 35) {
+                const pIdx = idx * 4;
+                let [r, g, b] = applyThemeColor(pix[pIdx], pix[pIdx+1], pix[pIdx+2], currentTheme);
+
+                edgePix[pIdx]   = r;
+                edgePix[pIdx+1] = g;
+                edgePix[pIdx+2] = b;
+                edgePix[pIdx+3] = 255;
+
+                if (x % STEP === 0 && y % STEP === 0 && Math.random() < 0.8) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = 800 + Math.random() * 1500;
+                    particles.push({
+                        targetX: x,
+                        targetY: y,
+                        x: CANVAS_W / 2 + Math.cos(angle) * dist,
+                        y: CANVAS_H / 2 + Math.sin(angle) * dist,
+                        size: 1.1 + Math.random() * 2.3,
+                        r, g, b,
+                        delay: Math.random() * 2.8,
+                        speed: 0.9 + Math.random() * 0.7,
+                        spiral: (Math.random() - 0.5) * 5.5
+                    });
+                }
+            }
+        }
+    }
+
+    const tempC = document.createElement('canvas');
+    tempC.width = CANVAS_W; tempC.height = CANVAS_H;
+    tempC.getContext('2d').putImageData(edgeData, 0, 0);
+
+    neonCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    neonCtx.fillStyle = "#000";
+    neonCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    
+    neonCtx.globalCompositeOperation = "screen";
+    neonCtx.filter = "blur(22px)";
+    neonCtx.drawImage(tempC, 0, 0);
+    neonCtx.filter = "blur(6px)";
+    neonCtx.drawImage(tempC, 0, 0);
+    neonCtx.filter = "none";
+    neonCtx.drawImage(tempC, 0, 0);
+    neonCtx.globalCompositeOperation = "source-over";
+
+    ambientMotes = [];
+    for (let i = 0; i < 120; i++) {
+        ambientMotes.push({
+            x: Math.random() * CANVAS_W,
+            y: Math.random() * CANVAS_H,
+            radius: Math.random() * 2.8 + 0.8,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: -Math.random() * 0.8 - 0.2,
+            alpha: Math.random()
+        });
+    }
+}
+
+// ==========================================
+// 5. MASTER RENDER PIPELINE
+// ==========================================
+function renderFrameWithFloor(srcCanvas, ctx) {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.drawImage(srcCanvas, 0, 0);
+
+    const reflH = Math.floor(CANVAS_H * 0.28);
+    const startY = CANVAS_H - reflH;
+
+    ctx.save();
+    ctx.translate(0, CANVAS_H + startY);
+    ctx.scale(1, -1);
+    ctx.drawImage(srcCanvas, 0, startY, CANVAS_W, reflH, 0, startY, CANVAS_W, reflH);
+    ctx.restore();
+
+    const grad = ctx.createLinearGradient(0, startY, 0, CANVAS_H);
+    grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+    grad.addColorStop(1, 'rgba(0,0,0,1.0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, startY, CANVAS_W, reflH);
+}
+
+function renderStardust(progress, ctx) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.24)";
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const localP = Math.max(0, Math.min(1, (progress * DURATION_SWARM - p.delay) / p.speed));
+        if (localP <= 0) continue;
+
+        const ease = 1 - Math.pow(1 - localP, 3);
+        const spiral = (1 - ease) * p.spiral;
+
+        const curX = p.x + (p.targetX - p.x) * ease + Math.sin(ease * Math.PI * 2) * 55 * spiral;
+        const curY = p.y + (p.targetY - p.y) * ease + Math.cos(ease * Math.PI * 2) * 55 * spiral;
+
+        ctx.beginPath();
+        ctx.arc(curX, curY, p.size * (1 + (1 - ease) * 2), 0, Math.PI * 2);
+        ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+        ctx.fill();
+    }
+}
+
+function renderRaySweep(progress, ctx) {
+    renderFrameWithFloor(neonCanvas, ctx);
+    const sweepX = progress * (CANVAS_W * 1.6) - (CANVAS_W * 0.3);
+    const grad = ctx.createLinearGradient(sweepX - 350, 0, sweepX + 350, CANVAS_H);
+    grad.addColorStop(0, 'rgba(255, 215, 0, 0)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
+    grad.addColorStop(1, 'rgba(0, 240, 255, 0)');
+
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.restore();
+}
+
+function renderFloatingMotes(ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    for (let m of ambientMotes) {
+        m.y += m.vy;
+        m.x += m.vx;
+        m.alpha += (Math.random() - 0.5) * 0.04;
+        if (m.y < 0) m.y = CANVAS_H;
+        if (m.x < 0) m.x = CANVAS_W;
+        if (m.x > CANVAS_W) m.x = 0;
+
+        ctx.fillStyle = `rgba(255, 225, 120, ${Math.max(0.1, Math.min(0.85, m.alpha))})`;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function tick(timestamp) {
+    if (!animStartTime) animStartTime = timestamp;
+    const elapsed = (timestamp - animStartTime) / 1000;
+
+    const t1 = DURATION_SWARM;
+    const t2 = t1 + DURATION_NEON;
+    const t3 = t2 + DURATION_SWEEP;
+    const t4 = t3 + DURATION_FADE;
+    const t5 = t4 + DURATION_HOLD;
+
+    const status = document.getElementById('status-text');
+
+    if (elapsed <= t1) {
+        status.textContent = "✨ 14,000 Cosmic Stardust Motes Assembling Lord Krishna...";
+        renderStardust(elapsed / t1, viewCtx);
+
+    } else if (elapsed <= t2) {
+        status.textContent = "🪈 Golden Bansuri & Mor Pankh Awakening";
+        renderFrameWithFloor(neonCanvas, viewCtx);
+        renderFloatingMotes(viewCtx);
+
+    } else if (elapsed <= t3) {
+        status.textContent = "🌟 Celestial Flute Light Ray Sweep";
+        renderRaySweep((elapsed - t2) / DURATION_SWEEP, viewCtx);
+        renderFloatingMotes(viewCtx);
+
+    } else if (elapsed <= t4) {
+        status.textContent = "🌸 Sacred Transmutation • Divine Darshan";
+        const progress = (elapsed - t3) / DURATION_FADE;
+
+        viewCtx.fillStyle = "#000";
+        viewCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+        const neonHolder = document.createElement('canvas');
+        neonHolder.width = CANVAS_W; neonHolder.height = CANVAS_H;
+        renderFrameWithFloor(neonCanvas, neonHolder.getContext('2d'));
+
+        viewCtx.globalAlpha = 1 - progress;
+        viewCtx.drawImage(neonHolder, 0, 0);
+
+        viewCtx.globalAlpha = progress;
+        viewCtx.drawImage(baseCanvas, 0, 0);
+        viewCtx.globalAlpha = 1.0;
+        renderFloatingMotes(viewCtx);
+
+    } else if (elapsed <= t5) {
+        status.textContent = "🕉️ श्री कृष्ण शरणं मम • Jai Shri Krishna";
+        viewCtx.drawImage(baseCanvas, 0, 0);
+        renderFloatingMotes(viewCtx);
+    } else {
+        status.textContent = "✨ Darshan Complete • Music Playing in Loop";
+        viewCtx.drawImage(baseCanvas, 0, 0);
+        renderFloatingMotes(viewCtx);
+    }
+
+    if (isRunning) requestAnimationFrame(tick);
+}
+
+function startExperience() {
+    startMusicPlayback();
+    animStartTime = null;
+    isRunning = true;
+    viewCtx.fillStyle = "#000";
+    viewCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    requestAnimationFrame(tick);
+}
+
+function loadAndProcess(imgOrCanvas) {
+    baseCtx.fillStyle = "#000";
+    baseCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    const iw = imgOrCanvas.naturalWidth || imgOrCanvas.width;
+    const ih = imgOrCanvas.naturalHeight || imgOrCanvas.height;
+    const scale = Math.min(CANVAS_W / iw, CANVAS_H / ih);
+    const nw = Math.floor(iw * scale);
+    const nh = Math.floor(ih * scale);
+    const ox = Math.floor((CANVAS_W - nw) / 2);
+    const oy = Math.floor((CANVAS_H - nh) / 2);
+
+    baseCtx.drawImage(imgOrCanvas, ox, oy, nw, nh);
+    generateNeonAndParticles();
+    startExperience();
+}
+
+// ==========================================
+// 6. 3D PARALLAX & VIDEO EXPORT WITH MUSIC
+// ==========================================
+const stage = document.getElementById('stage-container');
+stage.addEventListener('mousemove', (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 14;
+    const y = (e.clientY / window.innerHeight - 0.5) * -14;
+    viewCanvas.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+});
+stage.addEventListener('mouseleave', () => {
+    viewCanvas.style.transform = `rotateY(0deg) rotateX(0deg)`;
+});
+
+let mediaRecorder = null, recordedChunks = [];
+document.getElementById('btn-record').addEventListener('click', function() {
+    const btn = this;
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        btn.classList.remove('recording');
+        btn.textContent = "🔴 Record Reel";
+        return;
+    }
+
+    setupAudioStreamCapture();
+
+    const canvasStream = viewCanvas.captureStream(60);
+    let finalStream = canvasStream;
+
+    // Attach background music audio track into the recorded video
+    if (mediaStreamDest && mediaStreamDest.stream.getAudioTracks().length > 0) {
+        finalStream = new MediaStream([
+            ...canvasStream.getVideoTracks(),
+            ...mediaStreamDest.stream.getAudioTracks()
+        ]);
+    }
+
+    recordedChunks = [];
+    try {
+        mediaRecorder = new MediaRecorder(finalStream, { mimeType: 'video/webm;codecs=vp9,opus' });
+    } catch(e) {
+        mediaRecorder = new MediaRecorder(finalStream);
+    }
+
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `krishna-darshan-${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    mediaRecorder.start();
+    btn.classList.add('recording');
+    btn.textContent = "⏹️ Stop & Save";
+    startExperience();
+});
+
+// ==========================================
+// 7. EVENT HANDLERS
+// ==========================================
+window.addEventListener('dragover', (e) => { e.preventDefault(); document.getElementById('drop-zone').style.display = "flex"; });
+window.addEventListener('dragleave', (e) => { if (e.clientX === 0 && e.clientY === 0) document.getElementById('drop-zone').style.display = "none"; });
+window.addEventListener('drop', (e) => {
+    e.preventDefault();
+    document.getElementById('drop-zone').style.display = "none";
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+        const img = new Image();
+        img.onload = () => loadAndProcess(img);
+        img.src = URL.createObjectURL(file);
+    }
+});
+
+document.getElementById('file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const img = new Image();
+        img.onload = () => loadAndProcess(img);
+        img.src = URL.createObjectURL(file);
+    }
+});
+
+// Pick another music file dynamically if needed
+document.getElementById('audio-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        setupAudioStreamCapture();
+        bgAudio.src = URL.createObjectURL(file);
+        const name = file.name.length > 15 ? file.name.substring(0, 12) + "..." : file.name;
+        document.getElementById('bgm-name-tag').textContent = name;
+        startExperience();
+    }
+});
+
+document.getElementById('theme-select').addEventListener('change', (e) => {
+    currentTheme = e.target.value;
+    generateNeonAndParticles();
+    startExperience();
+});
+
+document.getElementById('btn-replay').addEventListener('click', startExperience);
+
+document.getElementById('btn-music-toggle').addEventListener('click', function() {
+    musicEnabled = !musicEnabled;
+    this.textContent = musicEnabled ? "🔊 Music: ON" : "🔇 Music: OFF";
+    if (musicEnabled) {
+        bgAudio.play();
+    } else {
+        stopMusicPlayback();
+    }
+});
+
+document.getElementById('volume-slider').addEventListener('input', function() {
+    bgAudio.volume = parseFloat(this.value);
+});
+
+document.getElementById('btn-fullscreen').addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+});
+
+// Initialize Masterpiece Artwork
+window.addEventListener('DOMContentLoaded', () => {
+    const svgString = getKrishnaMasterpieceSVG();
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+        loadAndProcess(img);
+        URL.revokeObjectURL(url);
+    };
+    img.src = url;
+});
+</script>
+</body>
+</html>
